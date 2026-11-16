@@ -9,8 +9,9 @@
     <h1>Hello, World!</h1>
     <div id="translation-container">
       <input type="text" id="input-text" placeholder="Enter text to translate" />
-      <button id="translate-button" onclick="translateFromBox()">Translate</button>
-      <p id="translated-text"></p>
+      <button id="translate-to-gauss-button" onclick="translateToGauss()">Translate English to Gausslandian</button>
+      <button id="translate-to-english-button" onclick="translateToEnglish()">Translate Gausslandian to English (<=5 chars only, no parentheses)</button>
+      <p id="translated-text" style="font-family: Arial;"></p>
     </div>
     <script type="module" src="app.js"></script>
   </body>

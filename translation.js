@@ -1,26 +1,33 @@
+// todo:
+// ? figure out logic for other punctuation like , ' ?
+// - what does '0' map to?
+// - does a single '4' or 'd' translate to the same thing as a single '5' or 'e' bc first space coersion?
+// - 5-letter words: sometimes don't have a trailing -? like 'jonas'. maybe depends if there are following words?
+// - make more efficient by using a dictionary instead of indexOf to find the letter's index
+
 const gaussAlphabet = [ // loops around to the beginning if the index is too high
 '+', '=', '/', ' ', '1', '2', '4', '5', '6', '7', '8', '9', ' ', 'x', '!', '-'
 ]
 
 const engAlphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
 
-// not sure how to fit these in clearly yet
+// not sure how to fit these in cleanly yet
 const specialCasesBaseIndex = new Map([
-    ['?', gaussAlphabet.indexOf('!')],
+    ['!', gaussAlphabet.indexOf('+')],
+    ["'", gaussAlphabet.indexOf('4')],
     [',', gaussAlphabet.indexOf('9')],
-    ["'", gaussAlphabet.indexOf('4')]
+    ['?', gaussAlphabet.indexOf('!')],
 ]);
-
-// todo:
-// X modulo the newLetterIndex to wrap around the alphabet
-// X add () around groups of 5 letters
-// ? figure out other punctuation like , ' ?
-// - make more efficient by using a dictionary instead of indexOf to find the letter's index
 
 export function engToGauss(toTranslate){
     const wordGroups = toTranslate.toLowerCase().split(' ');
     const translatedGroups = wordGroups.map(group => wordToGauss(group));
     return translatedGroups.join(' ');
+}
+
+// UNFINISHED
+export function gaussToEng(toTranslate){
+    return fiveLetterGaussToEng(toTranslate);
 }
 
 function wordToGauss(toTranslate){
@@ -81,4 +88,74 @@ function wordToGauss(toTranslate){
     }
   
   return translatedString;
+}
+
+const engLookup = new Map([
+    ['+', '1aq!'],
+    ['=', '2br'],
+    ['/', '3cs'],
+    [' ', '4dtm'],
+    ['1', '5eu'],
+    ['2', '6fv'],
+    ['4', "7gw'"],
+    ['5', '8hx'],
+    ['6', '9iy'],
+    ['7', 'jz'],
+    ['8', 'k'],
+    ['9', ',l'],
+    ['x', 'n'],
+    ['!', 'o?'],
+    ['-', 'p'],
+]);
+
+// if the first eng letter translates to a gaussian space (4?, d, m, or t),
+// the first letter of the gauss translation is coerced to 1 or x.
+// if we see that at i=0, use this as a shortcut to get both the standard and coerced options
+const firstLetterEngLookup = new Map([
+    ['1', '14detu'],
+    ['x', 'mn'],
+]);
+
+// call this when we see a space in the middle of a word,
+// since space shows up at two separate locations in the alphabet
+function getSpaceMultipleOptions(i){
+    const index1 = gaussAlphabet.indexOf(' ');
+    const index2 = gaussAlphabet.indexOf(' ', index1 + 1);
+    const newLetter1 = gaussAlphabet[index1 - i];
+    const newLetter2 = gaussAlphabet[index2 - i];
+    const option1 = engLookup.get(newLetter1);
+    const option2 = engLookup.get(newLetter2);
+    return option1 + option2;
+}
+
+function fiveLetterGaussToEng(toTranslate){
+    let letterGroups=[];
+    let i=0;
+
+    // check for special first case
+    const specialFirstCase = firstLetterEngLookup.get(toTranslate[0]);
+    if (specialFirstCase){
+        letterGroups.push(specialFirstCase);
+        i++;
+    }
+
+    while (i<toTranslate.length){
+        const gaussLetter = toTranslate.charAt(i);
+        if (gaussLetter === ' '){
+            letterGroups.push(getSpaceMultipleOptions(i));
+            i++;
+            continue;
+        }
+        const gaussIndex = gaussAlphabet.indexOf(gaussLetter); //todo: make a hash?
+        const gaussLetterIndexAdjusted = gaussAlphabet[gaussIndex - i]; // may wrap around to negatives
+        const engOptions = engLookup.get(gaussLetterIndexAdjusted);
+        letterGroups.push(engOptions);
+        i++;
+    }
+    // if last letter is '-', it might be a lingering space, so append the space options to the last letter group
+    // todo: does this still apply for the last char in a paren group? like (1234-)?
+    if (toTranslate.charAt(--i) === '-'){
+        letterGroups[i] = letterGroups[i] + getSpaceMultipleOptions(i);
+    }
+    return letterGroups;
 }
