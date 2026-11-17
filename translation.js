@@ -1,28 +1,52 @@
 // todo:
-// ? figure out logic for other punctuation like , ' ?
-// - what does '0' map to?
 // - does a single '4' or 'd' translate to the same thing as a single '5' or 'e' bc first space coersion?
-// - 5-letter words: sometimes don't have a trailing -? like 'jonas'. maybe depends if there are following words?
-// - make more efficient by using a dictionary instead of indexOf to find the letter's index
+// - convert arrays to hashes for faster lookup
 
-const gaussAlphabet = [ // loops around to the beginning if the index is too high
-'+', '=', '/', ' ', '1', '2', '4', '5', '6', '7', '8', '9', ' ', 'x', '!', '-'
+const minAscii = 32;
+const maxAscii = 256;
+// gets us displayable ascii characters. minus some ones in the middle. I'll figure those out later
+
+const gaussAlphabet = [
+    '-', '+', '=', '/', ' ', '1', '2', '4', '5', '6', '7', '8', '9', ' ', 'x', '!'
 ]
 
-const engAlphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
-
-// not sure how to fit these in cleanly yet
-const specialCasesBaseIndex = new Map([
-    ['!', gaussAlphabet.indexOf('+')],
-    ["'", gaussAlphabet.indexOf('4')],
-    [',', gaussAlphabet.indexOf('9')],
-    ['?', gaussAlphabet.indexOf('!')],
-]);
-
+/* 
+Handles English to Gausslandian Translation.
+Identifies word groups in the given string and concats their translations,
+as well as managing punctuation-dependent trailing space replacement.
+*/
 export function engToGauss(toTranslate){
-    const wordGroups = toTranslate.toLowerCase().split(' ');
-    const translatedGroups = wordGroups.map(group => wordToGauss(group));
-    return translatedGroups.join(' ');
+    let [i, substrStart]= [0,0];
+    let [wordGroup, translatedWordGroup, translation] = ["","",""];
+    toTranslate = toTranslate.replace(/\s/g, " "); // normalize spaces. maybe need to change html charset?
+    while (i <= toTranslate.length){
+        if (i<toTranslate.length && !(' .-'.includes(toTranslate.charAt(i)))){
+            // we have yet to reach a word boundary
+            i++;
+            continue;
+        }
+        // we have either reached a word boundary or are at the end of the sentence
+
+        wordGroup = toTranslate.substr(substrStart, i-substrStart);
+        translatedWordGroup = wordToGauss(wordGroup);
+        
+        // replace ending spaces if more words follow
+        // todo: can I make this a regex?
+        if (
+            translatedWordGroup.length > 0
+            && i < toTranslate.length
+            && toTranslate.charAt(i) === " "
+            && translatedWordGroup.at(-1) === " "
+        ){
+            translatedWordGroup = translatedWordGroup.slice(0, -1) + '-';
+        }
+
+        translation = translation.concat(translatedWordGroup);
+        translation = translation.concat(toTranslate.charAt(i));
+        substrStart = ++i;
+        translatedWordGroup = "";
+    }
+    return translation;
 }
 
 // UNFINISHED
@@ -35,56 +59,31 @@ function wordToGauss(toTranslate){
     for (let i=0; i<toTranslate.length; i++){
         // get current letter to translate
         let currentLetter = toTranslate.charAt(i);
-    
-        // these characters stay as-is afaik? spaces should be stripped out by now, but just in case
-        if (' .'.includes(currentLetter)){
-        translatedString=translatedString.concat(currentLetter);
-        // todo: figure out how += works with strings in js
-        continue;
+        let currentLetterAscii = currentLetter.charCodeAt(0);
+
+        if (currentLetterAscii < minAscii || currentLetterAscii > maxAscii){
+            // if the character is outside the convertable ascii range, append a ?
+            translatedString=translatedString.concat('?');
         }
-    
-        // get index for the letter
-        let alphabetIndex=-1;
-    
-        if (engAlphabet.includes(currentLetter)){
-        // most letters should fall here
-        alphabetIndex = engAlphabet.indexOf(currentLetter);
+        else {
+            // adjust index for location in the string
+            // i % 5 resets the index shift every 5 letters in a word.
+            // % 16 lets us loop the 16-letter gauss alphabet array
+            let newLetterIndex = (currentLetterAscii + (i % 5)) % 16;
+
+            // get Gaussian equivalent
+            let currentGaussLetter = gaussAlphabet[newLetterIndex];
+            if (currentGaussLetter === ' ' && (i % 5) === 0){
+                currentGaussLetter = gaussAlphabet[newLetterIndex +1];
+            }
+            translatedString=translatedString.concat(currentGaussLetter);
+            console.log(`currentLetter: ${currentLetter}, currentLetterAscii: ${currentLetterAscii}, newLetterIndex: ${newLetterIndex}, currentGaussLetter: ${currentGaussLetter}`);
         }
-    
-        else if ('123456789'.includes(currentLetter)){
-        // number indexes are just the number itself. subtract 1 to make 0-indexes. Idk what to do with 0 yet.
-        alphabetIndex = currentLetter -1;
-        }
-        else if (specialCasesBaseIndex.has(currentLetter)){
-        // special cases like ? , '
-        alphabetIndex = specialCasesBaseIndex.get(currentLetter);
-        }
-        else{
-        // any other characters append a ?
-        translatedString=translatedString.concat('?');
-        continue;
-        }
-    
-        // adjust index for location in the string
-        let newLetterIndex = alphabetIndex+(i % 5);
-        newLetterIndex = newLetterIndex % gaussAlphabet.length;
-    
-        // get Gaussian equivalent
-        let currentGaussLetter = gaussAlphabet[newLetterIndex];
-        if (currentGaussLetter === ' ' && (i % 5) === 0){
-        currentGaussLetter = gaussAlphabet[newLetterIndex +1];
-        }
-        translatedString=translatedString.concat(currentGaussLetter);
 
         // every 5 letters wrap the group in parentheses, add a space
         if ((i + 1) % 5 === 0) {
             translatedString = translatedString.slice(0, -5) + '(' + translatedString.slice(-5) + ') ';
         }
-    }
-
-    // if the last character is a space, replace it with -
-    if (translatedString.endsWith(' ')) {
-        translatedString = translatedString.slice(0, -1) + '-';
     }
   
   return translatedString;
@@ -147,13 +146,15 @@ function fiveLetterGaussToEng(toTranslate){
             continue;
         }
         const gaussIndex = gaussAlphabet.indexOf(gaussLetter); //todo: make a hash?
-        const gaussLetterIndexAdjusted = gaussAlphabet[gaussIndex - i]; // may wrap around to negatives
+        const gaussLetterIndexAdjusted = gaussAlphabet.at(gaussIndex - i); // may wrap around to negatives
         const engOptions = engLookup.get(gaussLetterIndexAdjusted);
         letterGroups.push(engOptions);
+        console.log(`gaussLetter: ${gaussLetter}, gaussIndex: ${gaussIndex}, gaussLetterIndexAdjusted: ${gaussLetterIndexAdjusted}, engOptions: ${engOptions}`);
         i++;
     }
     // if last letter is '-', it might be a lingering space, so append the space options to the last letter group
     // todo: does this still apply for the last char in a paren group? like (1234-)?
+    
     if (toTranslate.charAt(--i) === '-'){
         letterGroups[i] = letterGroups[i] + getSpaceMultipleOptions(i);
     }
