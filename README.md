@@ -15,10 +15,11 @@ Development in-progress.
 MVP TODO:
 
 Rules checks:
-- Does the first space in a parentheses group also get replaced with 1/x?
+- Does the first space in a parentheses group also get replaced with 1/x? ANSWER: YES
 - Are ? and ! in a 5-letter word treated as the end of a sentence (for - appending behavior?)
 - Is a hyphenated word treated as two words? What happens with the -?
 - Are double spaces allowed? In both parentheses and not? What about at the end of a sentence?
+    - ANSWER: at least yes in parentheses (disappointed => "(171  ) (--8+5) 11")
 
 Eng to Gauss:
 - Verify extended ascii mapping for accented characters
@@ -47,7 +48,7 @@ Stretch Goal TODO:
 - Automated tests
 
 
-# How Does Gausslandian language work? (WIP)
+# How Does Gausslandian language work? (WIP - NOT ACCURATE YET)
 
 ## Gausslandian Character Conversion
 

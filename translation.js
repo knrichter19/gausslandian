@@ -1,6 +1,5 @@
 // todo:
-// - does a single '4' or 'd' translate to the same thing as a single '5' or 'e' bc first space coersion?
-// - convert arrays to hashes for faster lookup
+// - convert arrays to hashes for faster lookup?
 
 const minAscii = 32;
 const maxAscii = 256;
@@ -77,7 +76,7 @@ function wordToGauss(toTranslate){
 
             // get Gaussian equivalent
             let currentGaussLetter = gaussAlphabet[newLetterIndex];
-            if (currentGaussLetter === ' ' && (i % 5) === 0 && toTranslate.length - i < 5){
+            if (currentGaussLetter === ' ' && (i % 5) === 0){
                 currentGaussLetter = gaussAlphabet[mod(newLetterIndex +1,16)];
             }
             translatedString=translatedString.concat(currentGaussLetter);
@@ -217,7 +216,7 @@ function fiveLetterGaussToEng(toTranslate, isParentheses=0, followingChar=''){
     // where space can be replaced with 1/x
     // TODO: confirm, do parentheses groups start with a space?
     const specialFirstCase = firstLetterEngLookup.get(toTranslate[0]);
-    if (!isParentheses && specialFirstCase){
+    if (specialFirstCase){
         letterGroups.push(specialFirstCase);
         i++;
     }
@@ -239,8 +238,9 @@ function fiveLetterGaussToEng(toTranslate, isParentheses=0, followingChar=''){
     // if last letter is '-' on a trailing group, it might be a lingering space,
     // so append the space options to the last letter group
     // This does not apply to parentheses groups and to the last word in a sentence
+    // or to singular dashes
     
-    if (!isParentheses && toTranslate.charAt(-1) === '-' && followingChar != '.'){
+    if (!isParentheses && toTranslate.charAt(-1) === '-' && toTranslate.length > 1 && followingChar != '.'){
         letterGroups[i] = [...letterGroups[i], ...getSpaceMultipleOptions(i).flat()];
     }
     return letterGroups;
