@@ -32,13 +32,15 @@ export function engToGauss(toTranslate){
         wordGroup = toTranslate.substr(substrStart, i-substrStart);
         translatedWordGroup = wordToGauss(wordGroup);
         
-        // replace ending spaces if more words follow
+        // replace ending spaces unless followed by a period
         // todo: can I make this a regex?
         if (
             translatedWordGroup.length > 0
-            && i < toTranslate.length
-            && toTranslate.charAt(i) === " "
             && translatedWordGroup.at(-1) === " "
+            && (
+                (i < toTranslate.length && toTranslate.charAt(i) === " ") ||
+                i == toTranslate.length
+            )
         ){
             translatedWordGroup = translatedWordGroup.slice(0, -1) + '-';
         }
@@ -168,8 +170,8 @@ function getSpaceMultipleOptions(i){
 // the first letter of the gauss translation is coerced to 1 or x.
 // if we see that at i=0, use this as a shortcut to get both the standard and coerced options
 const firstLetterEngLookup = new Map([
-    ['1', getSpaceMultipleOptions(0)[0]],
-    ['x', getSpaceMultipleOptions(0)[1]],
+    ['1', [...getEngLetterOptions(gaussAlphabet.indexOf('1')), ...getSpaceMultipleOptions(0)[0]]],
+    ['x', [...getEngLetterOptions(gaussAlphabet.indexOf('x')), ...getSpaceMultipleOptions(0)[1]]],
 ]);
 
 // assumes we have confirmed this is a singular english word
@@ -199,8 +201,6 @@ function gaussWordToEng(toTranslate, followingChar=''){
         letterGroups = [...letterGroups, ...fiveLetterGaussToEng(trailing, 0, followingChar)];
     }
     return letterGroups;
-    // for each group: compile options for letter groups
-    // return all letter groups
 }
 
 // lets us mod negative index offsets into positives
