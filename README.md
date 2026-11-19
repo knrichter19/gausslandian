@@ -14,13 +14,19 @@ Development in-progress.
 
 MVP TODO:
 
+Rules checks:
+- Does the first space in a parentheses group also get replaced with 1/x?
+- Are ? and ! in a 5-letter word treated as the end of a sentence (for - appending behavior?)
+- Is a hyphenated word treated as two words? What happens with the -?
+- Are double spaces allowed? In both parentheses and not? What about at the end of a sentence?
+
 Eng to Gauss:
-- Figure out if ?, !, etc. punctuation in 5-letter words is treated as the end of a sentence (for - appending behavior)
 - Verify extended ascii mapping for accented characters
-- Find in-game examples of dashes being translated or not
 
 Gauss to Eng:
 - Display output of Gauss->English character options more readably (ex, output all permutations)
+
+- Verify both translations against most in-game texts
 
 
 Target TODO:

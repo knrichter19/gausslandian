@@ -73,12 +73,12 @@ function wordToGauss(toTranslate){
             // adjust index for location in the string
             // i % 5 resets the index shift every 5 letters in a word.
             // % 16 lets us loop the 16-letter gauss alphabet array
-            let newLetterIndex = (currentLetterAscii + (i % 5)) % 16;
+            let newLetterIndex = mod(currentLetterAscii + (i % 5), 16);
 
             // get Gaussian equivalent
             let currentGaussLetter = gaussAlphabet[newLetterIndex];
-            if (currentGaussLetter === ' ' && (i % 5) === 0){
-                currentGaussLetter = gaussAlphabet[newLetterIndex +1];
+            if (currentGaussLetter === ' ' && (i % 5) === 0 && toTranslate.length - i < 5){
+                currentGaussLetter = gaussAlphabet[mod(newLetterIndex +1,16)];
             }
             translatedString=translatedString.concat(currentGaussLetter);
             console.log(`currentLetter: ${currentLetter}, currentLetterAscii: ${currentLetterAscii}, newLetterIndex: ${newLetterIndex}, currentGaussLetter: ${currentGaussLetter}`);
@@ -215,7 +215,7 @@ function fiveLetterGaussToEng(toTranslate, isParentheses=0, followingChar=''){
 
     // check for special first case on trailing groups
     // where space can be replaced with 1/x
-    // todo we don't need this
+    // TODO: confirm, do parentheses groups start with a space?
     const specialFirstCase = firstLetterEngLookup.get(toTranslate[0]);
     if (!isParentheses && specialFirstCase){
         letterGroups.push(specialFirstCase);
