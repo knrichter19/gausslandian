@@ -16,15 +16,11 @@ MVP TODO:
 
 Eng to Gauss:
 - Figure out if ?, !, etc. punctuation in 5-letter words is treated as the end of a sentence (for - appending behavior)
-- Verify extended ascii mapping for accented characters (and figure out if nonprintable chars are allowed)
+- Verify extended ascii mapping for accented characters
 - Find in-game examples of dashes being translated or not
 
 Gauss to Eng:
-- Add special characters in letter groupings (generate map dynamically?)
-- Support translating 5+ character Gauss words and parenthesis groups
 - Display output of Gauss->English character options more readably (ex, output all permutations)
-- Fix single '-' G->E output duplicating the space groupings (p4dtm4dtm)
-- Fix 'undefined' output for 5-letter words ending in spaces/-
 
 
 Target TODO:

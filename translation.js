@@ -4,6 +4,8 @@
 
 const minAscii = 32;
 const maxAscii = 256;
+const maxAsciiStandard = 127;
+
 // gets us displayable ascii characters. minus some ones in the middle. I'll figure those out later
 
 const gaussAlphabet = [
@@ -51,7 +53,7 @@ export function engToGauss(toTranslate){
 
 // UNFINISHED
 export function gaussToEng(toTranslate){
-    return fiveLetterGaussToEng(toTranslate);
+    return gaussWordToEng(toTranslate).map((x)=>letterListToString(x));
 }
 
 function wordToGauss(toTranslate){
@@ -89,51 +91,133 @@ function wordToGauss(toTranslate){
   return translatedString;
 }
 
-const engLookup = new Map([
-    ['+', '1aq!'],
-    ['=', '2br'],
-    ['/', '3cs'],
-    [' ', '4dtm'],
-    ['1', '5eu'],
-    ['2', '6fv'],
-    ['4', "7gw'"],
-    ['5', '8hx'],
-    ['6', '9iy'],
-    ['7', 'jz'],
-    ['8', 'k'],
-    ['9', ',l'],
-    ['x', 'n'],
-    ['!', 'o?'],
-    ['-', 'p'],
-]);
+
+function getEngLetterOptions(originalIndex){
+    let letterOpts = [];
+    // todo: remove duplicate capitals/lowercase
+    // todo: add extended ascii
+    for (let i = minAscii + originalIndex; i < maxAsciiStandard; i= i+16){
+        // skip unprintable chars if we expand this to non-standard ascii
+        if (i==32) continue;
+        letterOpts.push(String.fromCharCode(i));
+    }
+    return letterOpts;
+}
+
+function letterListToString(letterOpts){
+    return letterOpts.sort((a,b) => sortByCategory(a,b)).join('');
+}
+
+function isAsciiLetter(char) {
+  if (char.length !== 1) return false;
+  const code = char.charCodeAt(0);
+  return (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+}
+
+function sortByCategory(a,b){
+    const aCode = a.charCodeAt(0);
+    const bCode = b.charCodeAt(0);
+    let [aRank, bRank] = [0,0];
+
+    // todo: can make this cleaner
+    switch(true){
+        case (isAsciiLetter(a)):
+            // a-z range
+            aRank = 2;
+            break;
+        case (aCode >= 48 && aCode <= 57):
+            // numbers 0-9 range
+            aRank = 1;
+            break;
+        default:
+            // punctuation & anything else
+            aRank = 0;
+    }
+    switch(true){
+        case (isAsciiLetter(b)):
+            bRank = 2;
+            break;
+        case (bCode >= 48 && bCode <= 57):
+            bRank = 1;
+            break;
+        default:
+            bRank = 0;
+    }
+
+    // rank higher ranks first
+    if (aRank != bRank){
+        return bRank-aRank;
+    }
+
+    // rank in ascii code order if same rank
+    return aCode-bCode;
+}
+
+// call this when we see a space,
+// since space shows up at two separate locations in the alphabet
+// returns options for 1st and 2nd space separately in case we know which one it is
+function getSpaceMultipleOptions(i){
+    const index1 = gaussAlphabet.indexOf(' ');
+    const index2 = gaussAlphabet.indexOf(' ', index1 + 1);
+    const option1 = getEngLetterOptions(mod(index1-i, 16));
+    const option2 = getEngLetterOptions(mod(index2-i, 16));
+    return [option1, option2];
+}
 
 // if the first eng letter translates to a gaussian space (4?, d, m, or t),
 // the first letter of the gauss translation is coerced to 1 or x.
 // if we see that at i=0, use this as a shortcut to get both the standard and coerced options
 const firstLetterEngLookup = new Map([
-    ['1', '14detu'],
-    ['x', 'mn'],
+    ['1', getSpaceMultipleOptions(0)[0]],
+    ['x', getSpaceMultipleOptions(0)[1]],
 ]);
 
-// call this when we see a space in the middle of a word,
-// since space shows up at two separate locations in the alphabet
-function getSpaceMultipleOptions(i){
-    const index1 = gaussAlphabet.indexOf(' ');
-    const index2 = gaussAlphabet.indexOf(' ', index1 + 1);
-    const newLetter1 = gaussAlphabet[index1 - i];
-    const newLetter2 = gaussAlphabet[index2 - i];
-    const option1 = engLookup.get(newLetter1);
-    const option2 = engLookup.get(newLetter2);
-    return option1 + option2;
+// assumes we have confirmed this is a singular english word
+const gaussAlphabetRegex = "-+=/12456789x! ";
+// todo: do i need both this and the array above
+
+function gaussWordToEng(toTranslate, followingChar=''){
+    // extract all parentheses groups
+    const parenthesesRegex = new RegExp(`\\(([${gaussAlphabetRegex}]{5})\\)`, 'g');
+    const parenthesesGroups = Array.from(toTranslate.matchAll(parenthesesRegex), m => m[1]);
+    console.log(`parens: ${parenthesesGroups}`);
+
+    // extract non-parentheses group
+    const trailingRegex = new RegExp(`([${gaussAlphabetRegex.slice(0,-1)}][${gaussAlphabetRegex}]{0,3})$`);    
+    const trailingMatch = toTranslate.match(trailingRegex);
+    // ignore trailing - on 5-letter words: TODO make this nicer
+    const trailing = (trailingMatch && (toTranslate.slice(-2) !== ')-')) ? trailingMatch[1] : null; 
+    console.log(`trailing: ${trailing}`) ;
+    
+    let letterGroups = [];
+    for (let i = 0; i<parenthesesGroups.length; i++){
+        // todo: make a cache of these translations for repeated words
+        letterGroups = [...letterGroups, ...fiveLetterGaussToEng(parenthesesGroups[i], 1, followingChar)];
+    }
+
+    if (trailing){
+        letterGroups = [...letterGroups, ...fiveLetterGaussToEng(trailing, 0, followingChar)];
+    }
+    return letterGroups;
+    // for each group: compile options for letter groups
+    // return all letter groups
 }
 
-function fiveLetterGaussToEng(toTranslate){
+// lets us mod negative index offsets into positives
+function mod(n, d) {
+  return ((n % d) + d) % d;
+}
+
+// compiles letter group options for a string of 5 or fewer gaussian characters
+function fiveLetterGaussToEng(toTranslate, isParentheses=0, followingChar=''){
     let letterGroups=[];
     let i=0;
 
-    // check for special first case
+    // check for special first case on trailing groups
+    // where space can be replaced with 1/x
+    // todo we don't need this
     const specialFirstCase = firstLetterEngLookup.get(toTranslate[0]);
-    if (specialFirstCase){
+    if (!isParentheses && specialFirstCase){
         letterGroups.push(specialFirstCase);
         i++;
     }
@@ -141,22 +225,23 @@ function fiveLetterGaussToEng(toTranslate){
     while (i<toTranslate.length){
         const gaussLetter = toTranslate.charAt(i);
         if (gaussLetter === ' '){
-            letterGroups.push(getSpaceMultipleOptions(i));
+            letterGroups.push(getSpaceMultipleOptions(i).flat());
             i++;
             continue;
         }
         const gaussIndex = gaussAlphabet.indexOf(gaussLetter); //todo: make a hash?
-        const gaussLetterIndexAdjusted = gaussAlphabet.at(gaussIndex - i); // may wrap around to negatives
-        const engOptions = engLookup.get(gaussLetterIndexAdjusted);
+        const engOptions = getEngLetterOptions(mod(gaussIndex - i, 16));
         letterGroups.push(engOptions);
-        console.log(`gaussLetter: ${gaussLetter}, gaussIndex: ${gaussIndex}, gaussLetterIndexAdjusted: ${gaussLetterIndexAdjusted}, engOptions: ${engOptions}`);
+        console.log(`gaussLetter: ${gaussLetter}, gaussIndex: ${gaussIndex}, gaussIndexAdjusted: ${mod(gaussIndex-i),16}, engOptions: ${engOptions}`);
         i++;
     }
-    // if last letter is '-', it might be a lingering space, so append the space options to the last letter group
-    // todo: does this still apply for the last char in a paren group? like (1234-)?
+
+    // if last letter is '-' on a trailing group, it might be a lingering space,
+    // so append the space options to the last letter group
+    // This does not apply to parentheses groups and to the last word in a sentence
     
-    if (toTranslate.charAt(--i) === '-'){
-        letterGroups[i] = letterGroups[i] + getSpaceMultipleOptions(i);
+    if (!isParentheses && toTranslate.charAt(-1) === '-' && followingChar != '.'){
+        letterGroups[i] = [...letterGroups[i], ...getSpaceMultipleOptions(i).flat()];
     }
     return letterGroups;
 }
